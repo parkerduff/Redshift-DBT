@@ -3,32 +3,32 @@ dbt_time:
   outputs:
     dev:
       type: redshift
-      host: "default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com"
-      user: "admin"
-      password: "FLWGTnvecu049*%"
+      host: "{{ env_var('REDSHIFT_HOST', 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com') }}"
+      user: "{{ env_var('REDSHIFT_USER', 'admin') }}"
+      password: "{{ env_var('REDSHIFT_PASSWORD') }}"
       port: 5439
       dbname: "dev"
-      schema: "staging"
+      schema: "akshat_staging"
       threads: 2
       keepalives_idle: 0
       connect_timeout: 60
       retry_after_interval: 1
-      search_path: "staging"
+      search_path: "akshat_staging"
       timeout: 300
       statement_timeout: 300
       
     prod:
       type: redshift
-      host: "default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com"
-      user: "admin"
-      password: "FLWGTnvecu049*%"
+      host: "{{ env_var('REDSHIFT_HOST', 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com') }}"
+      user: "{{ env_var('REDSHIFT_USER', 'admin') }}"
+      password: "{{ env_var('REDSHIFT_PASSWORD') }}"
       port: 5439
       dbname: "dev"
-      schema: "prod_poc"
+      schema: "akshat_prod"
       threads: 2
       keepalives_idle: 0
       connect_timeout: 60
       retry_after_interval: 1
-      search_path: "prod_poc"
+      search_path: "akshat_prod"
       timeout: 300
       statement_timeout: 300

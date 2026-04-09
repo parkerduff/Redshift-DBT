@@ -32,5 +32,5 @@ models:
 vars:
   # Add any project-level variables here
   redshift_database: "dev"
-  redshift_schema_staging: "staging"
-  redshift_schema_prod: "public"
+  redshift_schema_staging: "akshat_raw"
+  redshift_schema_prod: "akshat_prod"
