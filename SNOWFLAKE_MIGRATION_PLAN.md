@@ -598,10 +598,12 @@ The following work streams have been executed in a single PR:
 - **WS5: Macros** — `incremental_merge.sql` audited. Uses standard `MERGE INTO ... USING ...` — no changes needed.
 - **WS6: Python CDC** — Both scripts converted: `psycopg2` → `snowflake.connector`, connection config updated to env-var-based Snowflake params, schema references updated to fully-qualified `DEV.STAGING.*` / `DEV.PUBLIC.*`, `information_schema` queries updated with `table_catalog = 'DEV'` and uppercased identifiers, hardcoded credentials removed.
 
+- **WS0: Environment Setup** — Snowflake account provisioned and validated. `dbt debug` connects OK (account `DZNHIUR-VG87224`, database `DEV`, warehouse `COMPUTE_WH`).
+- **WS7: Data Migration Script** — `migrate_to_snowflake.py` created with DDL for all 12 staging tables + CSV/Parquet/Stage loading support. Run `python migrate_to_snowflake.py --create-tables` to create tables, then load data via `--load-csv` or `--load-stage`.
+- **WS8: Integration Testing (partial)** — `dbt compile` passes (22 models, 29 tests, 12 sources, zero errors). `dbt run` and `dbt test` blocked on source data.
+
 ## Next Steps (remaining)
 
-1. **Complete WS0** — provision the Snowflake environment (account, database, schemas, roles, warehouses, S3 integration)
-2. **Run `dbt debug`** — validate connectivity against Snowflake
-3. **Execute WS7** — data migration (UNLOAD → S3 → COPY INTO) for all 12 staging tables
-4. **Execute WS8** — integration testing (`dbt compile`, `dbt run --full-refresh`, `dbt test`, incremental run, CDC processor test, data validation)
-5. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)
+1. **Load source data (WS7)** — use `migrate_to_snowflake.py` to create tables and load data from CSV/Parquet/S3
+2. **Complete WS8** — run `dbt run --full-refresh`, `dbt test`, incremental run test, CDC processor test
+3. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)
