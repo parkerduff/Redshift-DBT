@@ -598,10 +598,28 @@ The following work streams have been executed in a single PR:
 - **WS5: Macros** — `incremental_merge.sql` audited. Uses standard `MERGE INTO ... USING ...` — no changes needed.
 - **WS6: Python CDC** — Both scripts converted: `psycopg2` → `snowflake.connector`, connection config updated to env-var-based Snowflake params, schema references updated to fully-qualified `DEV.STAGING.*` / `DEV.PUBLIC.*`, `information_schema` queries updated with `table_catalog = 'DEV'` and uppercased identifiers, hardcoded credentials removed.
 
+### WS0: Snowflake Environment Setup — COMPLETE
+
+Provisioned on account `DZNHIUR-VG87224` (2026-04-09):
+
+| Task | Status | Details |
+|:---|:---|:---|
+| **0.1** Provision account | Already existed | Account `DZNHIUR-VG87224`, database `DEV` pre-existed |
+| **0.2** Database & schemas | Already existed | `DEV.STAGING`, `DEV.PUBLIC`, `DEV.PROD_POC`, `DEV.STAGING_PUBLIC` all present |
+| **0.3** Roles & users | **Created** | `ETL_ADMIN` (full DEV privileges), `BI_READ_ONLY` (SELECT-only), `DBT_SERVICE_ACCT` user with default role `ETL_ADMIN` and warehouse `WH_TRANSFORM` |
+| **0.4** Warehouses | **Created** | `WH_LOADING` (X-Small, auto-suspend 60s), `WH_TRANSFORM` (X-Small, auto-suspend 60s) — both granted to `ETL_ADMIN`; `WH_TRANSFORM` also granted to `BI_READ_ONLY` |
+| **0.5** S3 integration | **Deferred** | Requires S3 bucket and IAM role — will be configured when WS7 (data migration) begins |
+| **0.6** Network policies | **Deferred** | Requires trusted IP ranges — should be configured before production cutover (WS9) |
+
+**Exit criteria met:** `dbt debug` connects successfully against Snowflake (`All checks passed!`).
+
+### WS8.1: dbt compile Validation — COMPLETE
+
+- `dbt compile` ran successfully: **22 models, 29 data tests, 12 sources, 856 macros** — zero errors.
+- Compiled SQL inspected and confirmed to use valid Snowflake syntax (fully-qualified `DEV.STAGING.*` references, `DATE_PART(EPOCH_SECOND, ...)`, `LATERAL FLATTEN`, `IN (...)`, `ARRAY_SIZE()`, `WITHIN GROUP`).
+
 ## Next Steps (remaining)
 
-1. **Complete WS0** — provision the Snowflake environment (account, database, schemas, roles, warehouses, S3 integration)
-2. **Run `dbt debug`** — validate connectivity against Snowflake
-3. **Execute WS7** — data migration (UNLOAD → S3 → COPY INTO) for all 12 staging tables
-4. **Execute WS8** — integration testing (`dbt compile`, `dbt run --full-refresh`, `dbt test`, incremental run, CDC processor test, data validation)
-5. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)
+1. **Execute WS7** — data migration (UNLOAD → S3 → COPY INTO) for all 12 staging tables *(batch sessions, requires S3 bucket + IAM role)*
+2. **Execute WS8.2–8.6** — integration testing (`dbt run --full-refresh`, `dbt test`, incremental run, CDC processor test, data validation) *(requires WS7 data to be loaded)*
+3. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift) *(requires WS8 to pass)*
