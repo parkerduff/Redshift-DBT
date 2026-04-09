@@ -1,6 +1,6 @@
 # Redshift-DBT → Snowflake: Migration Execution Plan
 
-> **Status:** Planning only — no action taken  
+> **Status:** WS1–WS6 code conversion complete — ready for WS0 (environment setup) and WS7–WS9 (data migration, testing, cutover)  
 > **Source:** [Snowflake Migration Guide](https://docs.snowflake.com/en/migrations/guides/redshift#phase-3-database-code-conversion)  
 > **Repo:** `parkerduff/Redshift-DBT`  
 > **Approach:** Playbook-first iteration. Test one slice, refine the prompt, then batch.
@@ -581,13 +581,27 @@ With parallelization, the critical path is:
 
 ---
 
-## Next Steps (when ready to execute)
+## Completed Work
 
-1. **Complete WS0** — provision the Snowflake environment
-2. **Start WS1** — config layer PR (quick, unblocks everything)
-3. **Draft the `convert-intermediate-model` playbook** — this is the highest-risk playbook (has the most complex SQL conversions), so iterate on it first
-4. **Draft remaining playbooks** in parallel
-5. **Test each playbook** on its designated first item
-6. **Batch out** once playbooks are proven
-7. **Run WS8** — integration testing
-8. **Schedule cutover** (WS9)
+The following work streams have been executed in a single PR:
+
+- **WS1: Config Layer** — `profiles.yml` swapped to `type: snowflake` with env-var-based credentials, `requirements.txt` updated (`dbt-snowflake`, `snowflake-connector-python`), `dbt_project.yml` vars renamed from `redshift_*` to generic names with `quoting:` block added, `_sources.yml` updated to `DEV.STAGING`, `run_pipeline.sh` updated.
+- **WS2: Staging Models** — All 13 models audited. No Redshift-specific syntax found. Zero changes needed.
+- **WS3: Intermediate Models** — All 9 models converted:
+  - `int_vendor_mappings.sql`: `= ANY(ARRAY[1,2,7])` → `IN (1,2,7)`
+  - `int_user_product_categories.sql`: `unnest()` → `LATERAL FLATTEN()`, `!= '{}'` → `ARRAY_SIZE() > 0`
+  - `int_vendor_product_categories.sql`: `::text` → `::VARCHAR` (2 occurrences), `LISTAGG` → added `WITHIN GROUP`
+  - `int_preferred_vendor_mappings.sql`: `::text` → `::VARCHAR`, `LISTAGG` → added `WITHIN GROUP`
+  - `int_vendor_tags.sql`: `LISTAGG` → added `WITHIN GROUP (ORDER BY tags.name)`
+  - 4 clean models: no changes needed
+- **WS4: Mart Model** — `fact_vendor.sql` converted: `EXTRACT(EPOCH FROM x)::bigint` → `DATE_PART(EPOCH_SECOND, x)::INTEGER` (2 occurrences), `poc_id::text` → `poc_id::VARCHAR`
+- **WS5: Macros** — `incremental_merge.sql` audited. Uses standard `MERGE INTO ... USING ...` — no changes needed.
+- **WS6: Python CDC** — Both scripts converted: `psycopg2` → `snowflake.connector`, connection config updated to env-var-based Snowflake params, schema references updated to fully-qualified `DEV.STAGING.*` / `DEV.PUBLIC.*`, `information_schema` queries updated with `table_catalog = 'DEV'` and uppercased identifiers, hardcoded credentials removed.
+
+## Next Steps (remaining)
+
+1. **Complete WS0** — provision the Snowflake environment (account, database, schemas, roles, warehouses, S3 integration)
+2. **Run `dbt debug`** — validate connectivity against Snowflake
+3. **Execute WS7** — data migration (UNLOAD → S3 → COPY INTO) for all 12 staging tables
+4. **Execute WS8** — integration testing (`dbt compile`, `dbt run --full-refresh`, `dbt test`, incremental run, CDC processor test, data validation)
+5. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)

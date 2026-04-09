@@ -10,7 +10,7 @@ echo "🚀 Starting DBT Time Pipeline..."
 # Check if dbt is installed
 if ! command -v dbt &> /dev/null; then
     echo "❌ dbt is not installed. Please install dbt first:"
-    echo "   pip install dbt-core dbt-redshift"
+    echo "   pip install dbt-core dbt-snowflake"
     exit 1
 fi
 

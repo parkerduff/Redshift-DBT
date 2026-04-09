@@ -2,33 +2,27 @@ dbt_time:
   target: dev
   outputs:
     dev:
-      type: redshift
-      host: "{{ env_var('REDSHIFT_HOST', 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com') }}"
-      user: "{{ env_var('REDSHIFT_USER', 'admin') }}"
-      password: "{{ env_var('REDSHIFT_PASSWORD') }}"
-      port: 5439
-      dbname: "dev"
-      schema: "akshat_staging"
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'DBT_SERVICE_ACCT') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ETL_ADMIN') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'WH_TRANSFORM') }}"
+      database: "DEV"
+      schema: "STAGING"
       threads: 2
-      keepalives_idle: 0
       connect_timeout: 60
-      retry_after_interval: 1
-      search_path: "akshat_staging"
-      timeout: 300
-      statement_timeout: 300
-      
+      query_tag: "dbt_time_dev"
+
     prod:
-      type: redshift
-      host: "{{ env_var('REDSHIFT_HOST', 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com') }}"
-      user: "{{ env_var('REDSHIFT_USER', 'admin') }}"
-      password: "{{ env_var('REDSHIFT_PASSWORD') }}"
-      port: 5439
-      dbname: "dev"
-      schema: "akshat_prod"
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'DBT_SERVICE_ACCT') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ETL_ADMIN') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'WH_TRANSFORM') }}"
+      database: "DEV"
+      schema: "PUBLIC"
       threads: 2
-      keepalives_idle: 0
       connect_timeout: 60
-      retry_after_interval: 1
-      search_path: "akshat_prod"
-      timeout: 300
-      statement_timeout: 300
+      query_tag: "dbt_time_prod"

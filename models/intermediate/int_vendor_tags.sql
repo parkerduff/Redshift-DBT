@@ -6,7 +6,7 @@
 
 SELECT 
   t.taggable_id as company_id,
-  LISTAGG(tags.name, ', ') as tag_names
+  LISTAGG(tags.name, ', ') WITHIN GROUP (ORDER BY tags.name) as tag_names
 FROM {{ ref('stg_taggings') }} t
 INNER JOIN {{ ref('stg_tags') }} tags ON t.tag_id = tags.id
 WHERE t.taggable_type = 'Company'
