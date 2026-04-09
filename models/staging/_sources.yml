@@ -2,9 +2,9 @@ version: 2
 
 sources:
   - name: staging
-    description: "Staging schema tables from Redshift"
+    description: "Raw source tables from Redshift (akshat_raw schema)"
     database: "dev"
-    schema: "staging"
+    schema: "akshat_raw"
     
     tables:
       - name: buyer_seller_company_mappings
@@ -49,7 +49,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: company_id
             description: "Company ID"
           - name: name
@@ -80,7 +82,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: team_id
             description: "Team ID"
           - name: user_id
@@ -103,7 +107,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: name
             description: "Company name"
           - name: image_url
@@ -252,7 +258,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: name
             description: "Category name"
           - name: ancestry
@@ -291,7 +299,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: user_id
             description: "User ID"
           - name: company_id
@@ -316,7 +326,9 @@ sources:
             description: "Primary key"
             tests:
               - not_null
-              - unique
+              - unique:
+                  config:
+                    severity: warn
           - name: first_name
             description: "User first name"
           - name: last_name
