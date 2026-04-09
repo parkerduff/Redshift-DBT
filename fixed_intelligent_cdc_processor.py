@@ -65,7 +65,7 @@ class FixedIntelligentCDCProcessor:
                 ORDER BY ordinal_position
             """)
             
-            columns = [row[0] for row in cursor.fetchall()]
+            columns = [row[0].lower() for row in cursor.fetchall()]
             cursor.close()
             conn.close()
             return columns
@@ -197,7 +197,7 @@ class FixedIntelligentCDCProcessor:
                 WHERE table_catalog = 'DEV' AND table_schema = 'STAGING' AND table_name = '{table_name.upper()}'
                 ORDER BY ordinal_position
             """)
-            column_names = [row[0] for row in cursor.fetchall()]
+            column_names = [row[0].lower() for row in cursor.fetchall()]
             
             # Compare values
             changed_columns = []

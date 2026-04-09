@@ -122,7 +122,7 @@ SELECT
   archived_at,
   updated_at,
   -- Create composite key for incremental processing
-  vendor_id || '_' || COALESCE(poc_id::VARCHAR, 'no_poc') as vendor_id_poc_id
+  id || '_' || COALESCE(poc_id::VARCHAR, 'no_poc') as vendor_id_poc_id
 FROM final_vendor_data
 {% if is_incremental() %}
 WHERE updated_at >= (SELECT MAX(updated_at) FROM {{ this }}) - INTERVAL '30 minutes'

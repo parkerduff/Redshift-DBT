@@ -75,7 +75,7 @@ class SurgicalCDCProcessor:
             columns = []
             for row in cursor.fetchall():
                 columns.append({
-                    'name': row[0],
+                    'name': row[0].lower(),
                     'type': row[1],
                     'position': row[2],
                     'nullable': row[3] == 'YES'
@@ -122,7 +122,7 @@ class SurgicalCDCProcessor:
             cursor.execute(query)
             
             # Get column names
-            column_names = [desc[0] for desc in cursor.description]
+            column_names = [desc[0].lower() for desc in cursor.description]
             
             # Convert results to list of dictionaries
             records = []
@@ -186,7 +186,7 @@ class SurgicalCDCProcessor:
             cursor.execute(f"SELECT * FROM DEV.PUBLIC.{table_name} WHERE id = %s", (record_id,))
             
             # Get column names
-            column_names = [desc[0] for desc in cursor.description]
+            column_names = [desc[0].lower() for desc in cursor.description]
             
             row = cursor.fetchone()
             if row:
