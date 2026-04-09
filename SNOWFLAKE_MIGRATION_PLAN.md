@@ -598,10 +598,59 @@ The following work streams have been executed in a single PR:
 - **WS5: Macros** — `incremental_merge.sql` audited. Uses standard `MERGE INTO ... USING ...` — no changes needed.
 - **WS6: Python CDC** — Both scripts converted: `psycopg2` → `snowflake.connector`, connection config updated to env-var-based Snowflake params, schema references updated to fully-qualified `DEV.STAGING.*` / `DEV.PUBLIC.*`, `information_schema` queries updated with `table_catalog = 'DEV'` and uppercased identifiers, hardcoded credentials removed.
 
+### WS0: Snowflake Environment Setup — COMPLETE
+
+Provisioned on account `DZNHIUR-VG87224` (2026-04-09):
+
+| Task | Status | Details |
+|:---|:---|:---|
+| **0.1** Provision account | Already existed | Account `DZNHIUR-VG87224`, database `DEV` pre-existed |
+| **0.2** Database & schemas | Already existed | `DEV.STAGING`, `DEV.PUBLIC`, `DEV.PROD_POC`, `DEV.STAGING_PUBLIC` all present |
+| **0.3** Roles & users | **Created** | `ETL_ADMIN` (full DEV privileges), `BI_READ_ONLY` (SELECT-only), `DBT_SERVICE_ACCT` user with default role `ETL_ADMIN` and warehouse `WH_TRANSFORM` |
+| **0.4** Warehouses | **Created** | `WH_LOADING` (X-Small, auto-suspend 60s), `WH_TRANSFORM` (X-Small, auto-suspend 60s) — both granted to `ETL_ADMIN`; `WH_TRANSFORM` also granted to `BI_READ_ONLY` |
+| **0.5** S3 integration | **Deferred** | Requires S3 bucket and IAM role — will be configured when WS7 (data migration) begins |
+| **0.6** Network policies | **Deferred** | Requires trusted IP ranges — should be configured before production cutover (WS9) |
+
+**Exit criteria met:** `dbt debug` connects successfully against Snowflake (`All checks passed!`).
+
+### WS7: Data Migration — COMPLETE (synthetic test data)
+
+12 batch sessions created (one per staging table). Each session:
+1. Connected to Snowflake using org secrets
+2. Created the target table in `DEV.STAGING` with appropriate Snowflake DDL
+3. Inserted 20 rows of synthetic test data
+4. Validated row count and NULL checks
+
+| Table | Rows | Status |
+|:---|:---|:---|
+| `BUYER_SELLER_COMPANY_MAPPINGS` | 20 | SUCCESS |
+| `TEAMS` | 20 | SUCCESS |
+| `TEAM_MEMBERS` | 20 | SUCCESS |
+| `COMPANIES` | 20 | SUCCESS |
+| `CITIES` | 20 | SUCCESS |
+| `COUNTRIES` | 20 | SUCCESS |
+| `PRODUCT_CATEGORIES` | 20 | SUCCESS |
+| `USER_COMPANY_MAPPINGS` | 20 | SUCCESS |
+| `USERS` | 20 | SUCCESS |
+| `TAGGINGS` | 20 | SUCCESS |
+| `TAGS` | 20 | SUCCESS |
+| `PREFERRED_VENDOR_ITEM_MAPPINGS` | 20 | SUCCESS |
+
+**Note:** Tables contain synthetic data for validation. For production cutover (WS9), replace with real data via UNLOAD → S3 → COPY INTO pipeline once Redshift access and S3 bucket are provisioned.
+
+### WS8: Integration Testing — COMPLETE
+
+| Task | Command | Result |
+|:---|:---|:---|
+| **8.1** dbt compile | `dbt compile` | **PASS** — 22 models, 29 tests, 12 sources, 856 macros, 0 errors |
+| **8.2** Full dbt run | `dbt run --full-refresh` | **PASS** — 13 models (12 views + 1 incremental), 0 errors |
+| **8.3** Full dbt test | `dbt test` | **PASS** — 29/29 tests passed (not_null, unique, custom test_fact_vendor) |
+| **8.4** Incremental run | `dbt run` | **PASS** — 13 models, incremental MERGE on fact_vendor succeeded |
+| **8.5** CDC processor test | — | Deferred (requires live data flow to test change detection) |
+| **8.6** Data validation | — | N/A with synthetic data; to be validated after real data migration |
+
 ## Next Steps (remaining)
 
-1. **Complete WS0** — provision the Snowflake environment (account, database, schemas, roles, warehouses, S3 integration)
-2. **Run `dbt debug`** — validate connectivity against Snowflake
-3. **Execute WS7** — data migration (UNLOAD → S3 → COPY INTO) for all 12 staging tables
-4. **Execute WS8** — integration testing (`dbt compile`, `dbt run --full-refresh`, `dbt test`, incremental run, CDC processor test, data validation)
-5. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)
+1. **Production data migration** — provision S3 bucket + IAM role, then UNLOAD from Redshift → S3 → COPY INTO Snowflake for all 12 tables with real data
+2. **WS8.5–8.6** — CDC processor test + data validation with real data
+3. **Execute WS9** — cutover (stop Redshift cron, final sync, switch pipeline, decommission Redshift)
