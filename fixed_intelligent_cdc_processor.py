@@ -61,7 +61,7 @@ class FixedIntelligentCDCProcessor:
                 WHERE table_catalog = 'DEV'
                 AND table_schema = 'STAGING'
                 AND table_name = '{table_name.upper()}'
-                AND column_name NOT IN ('created_at', 'updated_at')
+                AND column_name NOT IN ('CREATED_AT', 'UPDATED_AT')
                 ORDER BY ordinal_position
             """)
             
