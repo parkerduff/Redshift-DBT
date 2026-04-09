@@ -28,9 +28,14 @@ models:
     intermediate:
       +materialized: ephemeral
 
-# Redshift specific configurations
+# Snowflake quoting configuration
+quoting:
+  database: false
+  schema: false
+  identifier: false
+
+# Project-level variables
 vars:
-  # Add any project-level variables here
-  redshift_database: "dev"
-  redshift_schema_staging: "akshat_raw"
-  redshift_schema_prod: "akshat_prod"
+  database: "DEV"
+  schema_staging: "STAGING"
+  schema_prod: "PUBLIC"

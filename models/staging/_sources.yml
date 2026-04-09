@@ -2,9 +2,9 @@ version: 2
 
 sources:
   - name: staging
-    description: "Raw source tables from Redshift (akshat_raw schema)"
-    database: "dev"
-    schema: "akshat_raw"
+    description: "Raw source tables in Snowflake (STAGING schema)"
+    database: "DEV"
+    schema: "STAGING"
     
     tables:
       - name: buyer_seller_company_mappings

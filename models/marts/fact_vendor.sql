@@ -98,7 +98,7 @@ SELECT
   city_name,
   country_name,
   address,
-  EXTRACT(EPOCH FROM created_at)::bigint as vendor_created_at,
+  DATE_PART(EPOCH_SECOND, created_at)::INTEGER as vendor_created_at,
   vendor_type,
   joining_status_label,
   category_names,
@@ -115,14 +115,14 @@ SELECT
   preferred_item_ids,
   score_value,
   vendor_code,
-  EXTRACT(EPOCH FROM network_joined_date)::bigint as network_joined_date,
+  DATE_PART(EPOCH_SECOND, network_joined_date)::INTEGER as network_joined_date,
   source,
   is_verified,
   misc,
   archived_at,
   updated_at,
   -- Create composite key for incremental processing
-  vendor_id || '_' || COALESCE(poc_id::text, 'no_poc') as vendor_id_poc_id
+  id || '_' || COALESCE(poc_id::VARCHAR, 'no_poc') as vendor_id_poc_id
 FROM final_vendor_data
 {% if is_incremental() %}
 WHERE updated_at >= (SELECT MAX(updated_at) FROM {{ this }}) - INTERVAL '30 minutes'

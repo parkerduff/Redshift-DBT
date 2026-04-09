@@ -8,7 +8,7 @@ import os
 import sys
 import subprocess
 import json
-import psycopg2
+import snowflake.connector
 from datetime import datetime
 from typing import Dict, List, Set, Optional
 
@@ -28,11 +28,12 @@ class FixedIntelligentCDCProcessor:
         
         # Database connection config
         self.db_config = db_config or {
-            'host': 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com',
-            'port': 5439,
-            'database': 'dev',
-            'user': 'admin',
-            'password': 'FLWGTnvecu049*%'
+            'account': os.environ.get('SNOWFLAKE_ACCOUNT', ''),
+            'warehouse': os.environ.get('SNOWFLAKE_WAREHOUSE', 'WH_TRANSFORM'),
+            'database': 'DEV',
+            'schema': 'STAGING',
+            'user': os.environ.get('SNOWFLAKE_USER', 'DBT_SERVICE_ACCT'),
+            'password': os.environ.get('SNOWFLAKE_PASSWORD', '')
         }
         
         print("🚀 Fixed Intelligent CDC Processor initialized")
@@ -40,7 +41,7 @@ class FixedIntelligentCDCProcessor:
     def get_db_connection(self):
         """Get database connection"""
         try:
-            conn = psycopg2.connect(**self.db_config)
+            conn = snowflake.connector.connect(**self.db_config)
             return conn
         except Exception as e:
             print(f"❌ Database connection failed: {e}")
@@ -57,13 +58,14 @@ class FixedIntelligentCDCProcessor:
             cursor.execute(f"""
                 SELECT column_name 
                 FROM information_schema.columns 
-                WHERE table_schema = 'staging' 
-                AND table_name = '{table_name}'
-                AND column_name NOT IN ('created_at', 'updated_at')
+                WHERE table_catalog = 'DEV'
+                AND table_schema = 'STAGING'
+                AND table_name = '{table_name.upper()}'
+                AND column_name NOT IN ('CREATED_AT', 'UPDATED_AT')
                 ORDER BY ordinal_position
             """)
             
-            columns = [row[0] for row in cursor.fetchall()]
+            columns = [row[0].lower() for row in cursor.fetchall()]
             cursor.close()
             conn.close()
             return columns
@@ -101,8 +103,8 @@ class FixedIntelligentCDCProcessor:
                     WHEN public.id IS NULL THEN true  -- New record
                     ELSE false  -- Existing record
                 END as is_new_record
-            FROM staging.{table_name} staging
-            LEFT JOIN public.{table_name} public ON staging.id = public.id
+            FROM DEV.STAGING.{table_name} staging
+            LEFT JOIN DEV.PUBLIC.{table_name} public ON staging.id = public.id
             ORDER BY staging.updated_at DESC
             """
             
@@ -168,8 +170,8 @@ class FixedIntelligentCDCProcessor:
             cursor = conn.cursor()
             
             # Get the record from both schemas
-            staging_query = f"SELECT * FROM staging.{table_name} WHERE id = %s"
-            public_query = f"SELECT * FROM public.{table_name} WHERE id = %s"
+            staging_query = f"SELECT * FROM DEV.STAGING.{table_name} WHERE id = %s"
+            public_query = f"SELECT * FROM DEV.PUBLIC.{table_name} WHERE id = %s"
             
             cursor.execute(staging_query, (record_id,))
             staging_record = cursor.fetchone()
@@ -192,10 +194,10 @@ class FixedIntelligentCDCProcessor:
             cursor.execute(f"""
                 SELECT column_name 
                 FROM information_schema.columns 
-                WHERE table_schema = 'staging' AND table_name = '{table_name}'
+                WHERE table_catalog = 'DEV' AND table_schema = 'STAGING' AND table_name = '{table_name.upper()}'
                 ORDER BY ordinal_position
             """)
-            column_names = [row[0] for row in cursor.fetchall()]
+            column_names = [row[0].lower() for row in cursor.fetchall()]
             
             # Compare values
             changed_columns = []

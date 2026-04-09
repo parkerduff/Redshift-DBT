@@ -9,7 +9,7 @@ import os
 import sys
 import subprocess
 import json
-import psycopg2
+import snowflake.connector
 from datetime import datetime
 from typing import Dict, List, Set, Optional, Tuple, Any
 
@@ -29,11 +29,12 @@ class SurgicalCDCProcessor:
         
         # Database connection config
         self.db_config = db_config or {
-            'host': 'default-workgroup.885373794985.ap-south-1.redshift-serverless.amazonaws.com',
-            'port': 5439,
-            'database': 'dev',
-            'user': 'admin',
-            'password': 'FLWGTnvecu049*%'
+            'account': os.environ.get('SNOWFLAKE_ACCOUNT', ''),
+            'warehouse': os.environ.get('SNOWFLAKE_WAREHOUSE', 'WH_TRANSFORM'),
+            'database': 'DEV',
+            'schema': 'STAGING',
+            'user': os.environ.get('SNOWFLAKE_USER', 'DBT_SERVICE_ACCT'),
+            'password': os.environ.get('SNOWFLAKE_PASSWORD', '')
         }
         
         print("🔬 Surgical CDC Processor - Full Column Precision Mode")
@@ -42,7 +43,7 @@ class SurgicalCDCProcessor:
     def get_db_connection(self):
         """Get database connection"""
         try:
-            conn = psycopg2.connect(**self.db_config)
+            conn = snowflake.connector.connect(**self.db_config)
             return conn
         except Exception as e:
             print(f"❌ Database connection failed: {e}")
@@ -65,15 +66,16 @@ class SurgicalCDCProcessor:
                     ordinal_position,
                     is_nullable
                 FROM information_schema.columns 
-                WHERE table_schema = 'staging' 
-                AND table_name = '{table_name}'
+                WHERE table_catalog = 'DEV'
+                AND table_schema = 'STAGING'
+                AND table_name = '{table_name.upper()}'
                 ORDER BY ordinal_position
             """)
             
             columns = []
             for row in cursor.fetchall():
                 columns.append({
-                    'name': row[0],
+                    'name': row[0].lower(),
                     'type': row[1],
                     'position': row[2],
                     'nullable': row[3] == 'YES'
@@ -112,15 +114,15 @@ class SurgicalCDCProcessor:
                     WHEN public.id IS NULL THEN true
                     ELSE false
                 END as is_new_record
-            FROM staging.{table_name} staging
-            LEFT JOIN public.{table_name} public ON staging.id = public.id
+            FROM DEV.STAGING.{table_name} staging
+            LEFT JOIN DEV.PUBLIC.{table_name} public ON staging.id = public.id
             ORDER BY staging.updated_at DESC
             """
             
             cursor.execute(query)
             
             # Get column names
-            column_names = [desc[0] for desc in cursor.description]
+            column_names = [desc[0].lower() for desc in cursor.description]
             
             # Convert results to list of dictionaries
             records = []
@@ -181,10 +183,10 @@ class SurgicalCDCProcessor:
         
         try:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT * FROM public.{table_name} WHERE id = %s", (record_id,))
+            cursor.execute(f"SELECT * FROM DEV.PUBLIC.{table_name} WHERE id = %s", (record_id,))
             
             # Get column names
-            column_names = [desc[0] for desc in cursor.description]
+            column_names = [desc[0].lower() for desc in cursor.description]
             
             row = cursor.fetchone()
             if row:
